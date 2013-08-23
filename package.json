@@ -1,0 +1,28 @@
+{
+  "name": "basespy",
+  "description": "Base class pub-sub observers for JS objects based on ECMA5 getters/setters",
+  "author": "Ramesh Nair <ram@hiddentao.com> (http://hiddentao.com)",
+  "version": "1.0.0",
+  "homepage": "https://github.com/hiddentao/basespy",
+  "licenses": [
+    {
+      "type": "BSD",
+      "url": "https://github.com/hiddentao/basespy/blob/master/LICENSE.md"
+    }
+  ],
+  "repository": {
+    "url": "git://github.com/hiddentao/basespy.git"
+  },
+  "main": "./basespy.min.js",
+  "devDependencies": {
+    "grunt": "=0.4.1",
+    "grunt-contrib-clean": "=0.4.0",
+    "grunt-contrib-uglify": "=0.2.0",
+    "grunt-contrib-jshint": "=0.4.1",
+    "grunt-contrib-jst": "=0.5.0",
+    "grunt-mocha-test": "~0.6.3",
+    "matchdep": "=0.1.1",
+    "sinon-chai": "=2.4.0",
+    "chai": "=1.7.2"
+  }
+}
