@@ -79,16 +79,6 @@
 
 
   /**
-   * Mark this computed property as volatile, i.e. that its computed value must never be cached.
-   * @return this.
-   */
-  Function.prototype.volatile = function() {
-    this.__volatile = true;
-    return this;
-  };
-
-
-  /**
    * Add property dependencies to given dependency graph.
    *
    * @param dependencyGraph {object} the dependency graph
@@ -138,14 +128,13 @@
     _forEach(dependents || {}, function(dependent) {
       // only update dependent if not already done so
       if (!notifiedDependents[dependent]) {
-        // delete property value
-        delete objInstance.__prop[dependent].value;
         // re-calculate it
         switch (objInstance.__prop[dependent].type) {
           case 'function':
             objInstance[dependent].call(objInstance);
             break;
           case 'computed':
+            objInstance.__prop[dependent].dirty = true; // mark value as dirty
             var a = objInstance[dependent];
             break;
         }
@@ -218,12 +207,14 @@
               // define the actual Object property on the class prototype
               Object.defineProperty(newClass.prototype, propName, {
                 get: function() {
-                  // value needs re-calculating?  if value not yet set or if property is marked as volatile
-                  if (!this.__prop[propName].hasOwnProperty('value') || propDef.__volatile) {
+                  // value needs re-calculating?  if value not yet set or if marked as dirty
+                  if (!this.__prop[propName].hasOwnProperty('value') || this.__prop[propName].dirty) {
+                    // reset dirty flag
+                    delete this.__prop[propName].dirty;
                     // calculate new value
                     var newVal = propDef.call(this);
                     // if new value is different to old one
-                    if (undefined !== newVal && newVal !== this.__prop[propName].value) {
+                    if (newVal !== this.__prop[propName].value) {
                       // save it (need to do this first in case dependents ask for this value)
                       this.__prop[propName].value = newVal;
                       // inform dependents

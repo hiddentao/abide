@@ -1,7 +1,7 @@
 ###
   Test new Function.prototype methods
 ###
-basespy = require('../basespy.min')
+require('../basespy.min')
 
 
 test = require('./utils').createTest(module)
@@ -25,7 +25,3 @@ test['computed'] = ->
   fn = (-> true).computed('blah')
   @expect(fn.__computed).to.eql ['blah']
 
-
-test['volatile'] = ->
-  fn = (-> true).volatile()
-  @expect(fn.__volatile).to.be.true
