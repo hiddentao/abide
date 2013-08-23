@@ -8,6 +8,20 @@ it aims to be smaller in scope and functionality and thus more lightweight.
 
 TODO...
 
+## Installation
+
+Node:
+
+    $ npm install abide
+
+Bower:
+
+    $ bower install abide
+
+Browser:
+
+    <script type="text/javascript" src="https://rawgithub.com/hiddentao/abide/master/abide.min.js"></script>
+
 ## History
 
 Inspired by [Ember.JS](http://emberjs.com/), I wanted something smaller in scope in functionality
@@ -26,4 +40,4 @@ Pull requests with comprehensive tests are welcome as long as they fit well with
 
 ## License
 
-See [LICENSE.md](https://github.com/hiddentao/basespy/blob/master/LICENSE.md)
+See [LICENSE.md](https://github.com/hiddentao/abide/blob/master/LICENSE.md)

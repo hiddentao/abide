@@ -29,7 +29,7 @@ module.exports = function (grunt) {
             ]
         },
         clean: {
-          build: ['<%= yeoman.build %>/basespy.min.js']
+          build: ['<%= yeoman.build %>/abide.min.js']
         },
         uglify: {
           options: {
@@ -37,7 +37,7 @@ module.exports = function (grunt) {
           },
           build: {
             files: {
-              '<%= yeoman.build %>/basespy.min.js': ['<%= yeoman.src %>/basespy.js']
+              '<%= yeoman.build %>/abide.min.js': ['<%= yeoman.src %>/abide.js']
             }
           }
         },

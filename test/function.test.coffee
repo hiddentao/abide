@@ -1,7 +1,7 @@
 ###
   Test new Function.prototype methods
 ###
-require('../basespy.min')
+require('../abide.min')
 
 
 test = require('./utils').createTest(module)

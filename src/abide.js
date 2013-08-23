@@ -1,4 +1,4 @@
-/*! basespy | https://github.com/hiddentao/basespy | BSD license */
+/*! abide | https://github.com/hiddentao/abide | BSD license */
 (function (name, definition){
   'use strict';
 

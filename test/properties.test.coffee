@@ -1,7 +1,7 @@
 ###
   Test property notifications and dependencies
 ###
-BaseSpy = require('../basespy.min')
+BaseSpy = require('../abide.min')
 
 
 test = require('./utils').createTest(module)
@@ -137,4 +137,6 @@ test['computed properties'] =
     m = new MyClass()
     @expect(m.fullName).to.eql 'Mark1 Mark1b'
 
+
+#test['observer methods']
 
