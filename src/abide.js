@@ -17,7 +17,7 @@
     };
     global[name] = theModule;
   }
-})('BaseSpy', function () {
+})('Abide', function () {
   'use strict';
 
   /**
@@ -42,6 +42,28 @@
         func.call(null, object[key], key);
       }
     }
+  };
+
+
+  /**
+   * Add key-value pairs from one or more objects to another one.
+   *
+   * @param dst {object} the destination object to modify.
+   * @param src {object} the source object. Use additional parameters to pass in additional source objects.
+   *
+   * @return {object} the modified destination object.
+   * @private
+   */
+  var _extend = function(dst, src) {
+    // for each passed-in argument, treat it as a mixin/class we want to extend the base class with in order to create
+    // this new child class.
+    _forEach(_toArray(arguments).slice(1), function(mixin) {
+      _forEach(mixin, function(value, key) {
+        dst[key] = value;
+      });
+    });
+
+    return dst;
   };
 
 
@@ -79,77 +101,6 @@
 
 
   /**
-   * Add property dependencies to given dependency graph.
-   *
-   * @param dependencyGraph {object} the dependency graph
-   * @param target {string} the property which will get updated.
-   * @param sources {Array} names of properties upon which the target property depends.
-   */
-  var _addDependencies = function(dependencyGraph, target, sources) {
-    _forEach(sources, function(source) {
-      if (!dependencyGraph[source]) {
-        dependencyGraph[source] = {};
-      }
-
-      dependencyGraph[source][target] = target;
-    });
-  };
-
-
-  // keep track of dependencies which have already been notified
-  var notifiedDependents = null;
-
-
-  /**
-   * Notify dependents of given property that it has been updated.
-   *
-   * The 'this' variable points to the object instance whose property got updated.
-   *
-   * @param dependencyGraph {object} the dependency graph.
-   * @param source {string} the name of the property which got updated.
-   * @private
-   */
-  var _notifyDependents = function(dependencyGraph, source) {
-    var objInstance = this;
-
-    // this function will get called later on in the call chain as dependents in turn notify their own dependents of changes.
-    // so we'll use a variable to keep track of the first call made to this function so that we can clean up afterwards (see bottom).
-    var thisIsTheRootCall = false;
-    if (!notifiedDependents) {
-      notifiedDependents = {};
-      thisIsTheRootCall = true;
-    }
-
-    // mark that this current property has been notified
-    notifiedDependents[source] = true;
-
-    // for each of this property's dependents
-    var dependents = dependencyGraph[source];
-    _forEach(dependents || {}, function(dependent) {
-      // only update dependent if not already done so
-      if (!notifiedDependents[dependent]) {
-        // re-calculate it
-        switch (objInstance.__prop[dependent].type) {
-          case 'function':
-            objInstance[dependent].call(objInstance);
-            break;
-          case 'computed':
-            objInstance.__prop[dependent].dirty = true; // mark value as dirty
-            var a = objInstance[dependent];
-            break;
-        }
-      }
-    });
-
-    // if this was the original notify call then clean out the record of which dependents have been notified in order to
-    // be ready for the next call to this method.
-    if (thisIsTheRootCall) {
-      notifiedDependents = null;
-    }
-  };
-
-
-  /**
    * Create and return a .extend() method for the given class.
    *
    * @param BaseClass {object} the class object to which we will attach the returned method.
@@ -159,25 +110,89 @@
     return function() {
       // create a child class.
       var newClass = function() {
-        BaseClass.call(this);
+        BaseClass.apply(this, _toArray(arguments));
       };
       newClass.inheritsFrom(BaseClass);
 
       // where property meta info and cached values get stored
       newClass.prototype.__prop = {};
-      // where dependencies between properties gets stored
-      newClass.__dependencies = {};
+      // where property dependencies get stored
+      newClass.prototype.__deps = {};
 
       // inherit the base class's definition
       newClass.__classDefinition = BaseClass.__classDefinition || {};
 
       // for each passed-in argument, treat it as a mixin/class we want to extend the base class with in order to create
       // this new child class.
-      _forEach(_toArray(arguments), function(mixin) {
-        _forEach(mixin, function(value, key) {
-          newClass.__classDefinition[key] = value;
+      _extend.apply(null, [newClass.__classDefinition].concat(_toArray(arguments)));
+
+
+      /**
+       * Add dependents to be notified when property gets updated.
+       *
+       * @param name {string} the property which will get updated.
+       * @param sources {Array} names of properties upon which the target property depends.
+       * @private
+       */
+      var _addPropertyDependencies = function(name, sources) {
+        var proto = newClass.prototype;
+
+        _forEach(sources, function(source) {
+          if (!proto.__deps[source]) {
+            proto.__deps[source] = {};
+          }
+
+          proto.__deps[source][name] = name;
         });
-      });
+      };
+
+
+      /**
+       * Notify dependents of given property that it has been updated.
+       *
+       * Call this directly to notify dependents even if an update hasn't taken place.
+       *
+       * @param name {string} the name of the property which got updated.
+       * @private
+       */
+      newClass.prototype.notifyPropertyUpdated = function(name) {
+        var self = this;
+
+        // this function will get called later on in the call chain as dependents in turn notify their own dependents of changes.
+        // so we'll use a variable to keep track of the first call made to this function so that we can clean up afterwards (see bottom).
+        var thisIsTheRootCall = false;
+        if (!self.__notifiedDependents) {
+          self.__notifiedDependents = {};
+          thisIsTheRootCall = true;
+        }
+
+        // mark that this current property has been notified
+        self.__notifiedDependents[name] = true;
+
+        // for each of this property's dependents
+        _forEach(self.__deps[name] || {}, function(dependent) {
+          // only update dependent if not already done so
+          if (!self.__notifiedDependents[dependent]) {
+            // re-calculate it
+            switch (self.__prop[dependent].type) {
+              case 'function':
+                self[dependent].call(self);
+                break;
+              case 'computed':
+                self.__prop[dependent].dirty = true; // mark value as dirty
+                var a = self[dependent];
+                break;
+            }
+          }
+        });
+
+        // if this was the original notify call then clean out the record of which dependents have been notified in order to
+        // be ready for the next call to this method.
+        if (thisIsTheRootCall) {
+          delete self.__notifiedDependents;
+        }
+      };
+
 
       // process the final definition of this new child class
       _forEach(newClass.__classDefinition, function(propDef, propName) {
@@ -187,23 +202,41 @@
           case 'function':
             // is it a function call which observes other properties?
             if (propDef.__observes) {
-              // save the dependency info
-              _addDependencies(newClass.__dependencies, propName, propDef.__observes);
               // save  meta info
               newClass.prototype.__prop[propName] = {
                 type: 'function'
               };
+              // dependencies
+              _addPropertyDependencies(propName, propDef.__observes);
               // create the method on the class prototype
-              newClass.prototype[propName] = propDef;
+              newClass.prototype[propName] = function() {
+                // this method might internally make use of computed properties which it also observes. In that case, when
+                // those properties get fetched for the first time they will auto-trigger a call to this method. Since
+                // we are already calling this method we don't want to call it a second time. So let's keep track of that
+                // fact here.
+                var thisIsTheRootCall = false;
+                if (!this.__notifiedDependents) {
+                  this.__notifiedDependents = {};
+                  this.__notifiedDependents[propName] = propName;
+                  thisIsTheRootCall = true;
+                }
+
+                // call the actual method implementation
+                propDef.apply(this, _toArray(arguments));
+
+                if (thisIsTheRootCall) {
+                  delete this.__notifiedDependents;
+                }
+              };
             }
             // is it actually a computed property?
             else if (propDef.__computed) {
-              // save the dependency info
-              _addDependencies(newClass.__dependencies, propName, propDef.__computed);
-              // save meta info
+              // save  meta info
               newClass.prototype.__prop[propName] = {
                 type: 'computed'
               };
+              // dependencies
+              _addPropertyDependencies(propName, propDef.__computed);
               // define the actual Object property on the class prototype
               Object.defineProperty(newClass.prototype, propName, {
                 get: function() {
@@ -218,7 +251,7 @@
                       // save it (need to do this first in case dependents ask for this value)
                       this.__prop[propName].value = newVal;
                       // inform dependents
-                      _notifyDependents.call(this, newClass.__dependencies, propName);
+                      this.notifyPropertyUpdated(propName);
                     }
                   }
                   // return current value
@@ -237,11 +270,12 @@
             break;
           // is it just a normal value?
           default:
+            // save  meta info
             newClass.prototype.__prop[propName] = {
               type: 'value',
               value: propDef
             };
-
+            // define the actual property
             Object.defineProperty(newClass.prototype, propName, {
               get: function() {
                 return this.__prop[propName].value;
@@ -252,7 +286,7 @@
                   // save it (do this first in case dependents ask for this value)
                   this.__prop[propName].value = val;
                   // inform dependents
-                  _notifyDependents.call(this, newClass.__dependencies, propName);
+                  this.notifyPropertyUpdated(propName);
                 }
               }
             });
@@ -270,7 +304,7 @@
    * @constructor
    */
   var Base = function() {
-    this._init();
+    this._construct.apply(this, _toArray(arguments));
   };
 
   /**
@@ -278,7 +312,7 @@
    * Subclasses should treat this method as the constructor and override it if necessary.
    * @private
    */
-  Base.prototype._init = function() {};
+  Base.prototype._construct = function() {};
 
   /**
    * Extend this Base class to create a new child class.
